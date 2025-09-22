@@ -19,14 +19,13 @@ tracing = "0.1.41"
 tinyaudio = "1.1.0"
 strum = { version = "0.27.2", features = ["derive"] }
 strum_macros = "0.27.2"
+biquad = "0.5.0"
 
 [features]
 default = ["mobile"]
 web = ["dioxus/web"]
 desktop = ["dioxus/desktop"]
 mobile = ["dioxus/mobile"]
-
-[profile]
 
 [profile.dev.package."stepper-synth"]
 opt-level = 3

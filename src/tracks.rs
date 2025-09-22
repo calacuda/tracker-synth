@@ -19,7 +19,8 @@ impl Default for Track {
         Self {
             name: "UNNAMED-1".into(),
             steps: (0..N_STEPS).map(|_| Step::default()).collect(),
-            dev: SynthId::default(),
+            dev: "Default".into(),
+            // dev: SynthId::default(),
             chan: Channel::Ch1,
             uuid: 0,
         }
@@ -27,13 +28,13 @@ impl Default for Track {
 }
 
 impl Track {
-    pub fn new(name: Option<String>, uuid: usize) -> Self {
+    pub fn new(name: Option<String>, uuid: usize, dev: SynthId) -> Self {
         let name = name.unwrap_or(format!("UNNAMED-{uuid}")); 
 
         Self {
             name,
             steps: (0..N_STEPS).map(|_| Step::default()).collect(),
-            dev: SynthId::default(),
+            dev,
             chan: Channel::Ch1,
             uuid,
         }

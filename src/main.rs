@@ -24,7 +24,8 @@ pub mod synth;
 pub mod tracks;
 pub mod less_then;
 
-pub type SynthId = usize;
+pub type SynthId = String;
+// pub type InstrumentId = String;
 
 const FAVICON: Asset = asset!("/assets/favicon.ico");
 const MAIN_CSS: Asset = asset!("/assets/main.css");
@@ -56,65 +57,65 @@ fn main() {
     dioxus_logger::init(Level::INFO).expect("failed to init logger");
 
     // needed bc audio output will fail if its started too soon.
-    let (synth, output_dev) = make_synth();
+    // let (synth, output_dev) = make_synth();
+    let synth = make_synth();
 
-    let _jh = spawn(move || {
-            while let Ok(msg) = MIDI_RECV.recv() {
-                if let Ok(ref mut synth) = synth.synth.write() {
-                    match msg {
-                        MidiMessage::Invalid => {
-                            // error!("system received an invalid MIDI message.");
-                        }
-                        MidiMessage::NoteOn(_, KeyEvent { key, value }) => {
-                            synth.engine.play(key, value)
-                        }
-                        MidiMessage::NoteOff(_, KeyEvent { key, value: _ }) => {
-                            synth.engine.stop(key)
-                        }
-                        MidiMessage::PitchBend(_, lsb, msb) => {
-                            let bend =
-                                i16::from_le_bytes([lsb, msb]) as f32 / (32_000.0 * 0.5) - 1.0;
+    // let _jh = spawn(move || {
+    //         while let Ok(msg) = MIDI_RECV.recv() {
+    //             if let Ok(ref mut synth) = synth.synth.write() {
+    //                 match msg {
+    //                     MidiMessage::Invalid => {
+    //                         // error!("system received an invalid MIDI message.");
+    //                     }
+    //                     MidiMessage::NoteOn(_, KeyEvent { key, value }) => {
+    //                         synth.engine.play(key, value)
+    //                     }
+    //                     MidiMessage::NoteOff(_, KeyEvent { key, value: _ }) => {
+    //                         synth.engine.stop(key)
+    //                     }
+    //                     MidiMessage::PitchBend(_, lsb, msb) => {
+    //                         let bend =
+    //                             i16::from_le_bytes([lsb, msb]) as f32 / (32_000.0 * 0.5) - 1.0;
 
-                            if bend > 0.02 || bend < -0.020 {
-                                synth.engine.bend(bend);
-                            } else {
-                                synth.engine.unbend();
-                            }
-                        }
-                        MidiMessage::ControlChange(_, ControlEvent { control, value }) => {
-                            let value = value as f32 / 127.0;
-                            // let effects = self.target_effects;
+    //                         if bend > 0.02 || bend < -0.020 {
+    //                             synth.engine.bend(bend);
+    //                         } else {
+    //                             synth.engine.unbend();
+    //                         }
+    //                     }
+    //                     MidiMessage::ControlChange(_, ControlEvent { control, value }) => {
+    //                         let value = value as f32 / 127.0;
+    //                         // let effects = self.target_effects;
 
-                            match synth.engine {
-                                SynthModule::WaveTable(ref mut wt) => {
-                                    wt.synth.midi_input(&msg);
-                                }
-                                ref mut engine => {
-                                    match control {
-                                        70 => engine.knob_1(value),
-                                        71 => engine.knob_2(value),
-                                        72 => engine.knob_3(value),
-                                        73 => engine.knob_4(value),
-                                        74 => engine.knob_5(value),
-                                        75 => engine.knob_6(value),
-                                        76 => engine.knob_7(value),
-                                        77 => engine.knob_8(value),
-                                        1 => engine.volume_swell(value),
-                                        _ => {
-                                            // info!("CC message => {control}-{value}");
-                                            false
-                                        }
-                                    };
-                                }
-                            }
-                            
-                        }
-                        _ => {}
-                    }
-                }
-            }
-        }
-    );
+    //                         match synth.engine {
+    //                             SynthModule::WaveTable(ref mut wt) => {
+    //                                 wt.synth.midi_input(&msg);
+    //                             }
+    //                             ref mut engine => {
+    //                                 match control {
+    //                                     70 => engine.knob_1(value),
+    //                                     71 => engine.knob_2(value),
+    //                                     72 => engine.knob_3(value),
+    //                                     73 => engine.knob_4(value),
+    //                                     74 => engine.knob_5(value),
+    //                                     75 => engine.knob_6(value),
+    //                                     76 => engine.knob_7(value),
+    //                                     77 => engine.knob_8(value),
+    //                                     1 => engine.volume_swell(value),
+    //                                     _ => {
+    //                                         // info!("CC message => {control}-{value}");
+    //                                         false
+    //                                     }
+    //                                 };
+    //                             }
+    //                         }
+    //                     }
+    //                     _ => {}
+    //                 }
+    //             }
+    //         }
+    //     }
+    // );
 
     dioxus::launch(App);
 }
@@ -122,7 +123,7 @@ fn main() {
 #[component]
 fn App() -> Element {
     let middle_view = use_signal(|| MiddleColView::Section);
-    let sections = use_signal(|| vec![Track::default(), Track::new(Some("Another-Section".into()), 1)]);
+    let sections = use_signal(|| vec![Track::default(), Track::new(Some("Another-Section".into()), 1, "Default".into())]);
     let displaying_uuid = use_signal(|| 0usize);
     // used to give context to the edit note/velcity/cmd-1/cmd-2
     let edit_cell = use_signal(|| None);
@@ -356,11 +357,11 @@ fn SectionDisplay(middle_view: Signal<MiddleColView>, sections: Signal<Vec<Track
     rsx! {
         div {
             id: "section-display-header",
-            div { "Line " }
+            div { "Line" }
             div { "Note" }
-            div { "Vlcty" }
-            div { "Cmd-1" }
-            div { "Cmd-2" }
+            div { "Vel" }
+            div { "Cmd1" }
+            div { "Cmd2" }
         }
 
         div {

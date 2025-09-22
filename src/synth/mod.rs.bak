@@ -13,16 +13,15 @@ use stepper_synth_backend::{
     SAMPLE_RATE,
 };
 use tinyaudio::{run_output_device, OutputDevice, OutputDeviceParameters};
-use crate::SynthId;
 
 #[derive(Debug)]
 pub struct TabSynth {
-    pub synth: Arc<RwLock<Vec<(RwLock<SynthId>, RwLock<SynthChannel>)>>>,
+    pub synth: Arc<RwLock<SynthChannel>>,
 }
 
 impl TabSynth {
     pub fn new() -> (Self, OutputDevice) {
-        let synth = Arc::new(RwLock::new(vec![(RwLock::new("Default".to_string()), RwLock::new(SynthChannel::from(SynthEngineType::WaveTable)))]));
+        let synth = Arc::new(RwLock::new(SynthChannel::from(SynthEngineType::WaveTable)));
 
         let device = {
             let synth = synth.clone();
@@ -39,9 +38,10 @@ impl TabSynth {
 
                 move |data| {
                     for samples in data.chunks_mut(params.channels_count) {
-                        let value = synth.write().map(|synth| synth.iter().map(|(_name, instrument)| instrument.write()
+                        let value = synth
+                            .write()
                             .map(|mut synth| synth.get_sample())
-                            .unwrap_or(0.0)).sum()).unwrap_or(0.0);
+                            .unwrap_or(0.0);
 
                         for sample in samples {
                             *sample = value;
@@ -60,17 +60,17 @@ impl TabSynth {
         }
     }
 
-    // #[unsafe(no_mangle)]
-    // pub fn play(&mut self, note: u8, velocity: u8) {
-    //     println!("playing note {note}");
-    //     self.synth.write().unwrap().engine.play(note, velocity);
-    // }
+    #[unsafe(no_mangle)]
+    pub fn play(&mut self, note: u8, velocity: u8) {
+        println!("playing note {note}");
+        self.synth.write().unwrap().engine.play(note, velocity);
+    }
 
-    // #[unsafe(no_mangle)]
-    // pub fn stop(&mut self, note: u8) {
-    //     println!("stopping note {note}");
-    //     self.synth.write().unwrap().engine.stop(note);
-    // }
+    #[unsafe(no_mangle)]
+    pub fn stop(&mut self, note: u8) {
+        println!("stopping note {note}");
+        self.synth.write().unwrap().engine.stop(note);
+    }
 
     // #[unsafe(no_mangle)]
     // pub fn bend(&mut self, bend: i16) {
