@@ -1,0 +1,45 @@
+[package]
+name = "tracker-synth"
+version = "0.1.0"
+authors = ["Eoghan West <eowest@gmail.com>"]
+edition = "2024"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+android-usbser = "0.2.3"
+crossbeam = { version = "0.8.4", features = ["crossbeam-channel", "nightly"] }
+dioxus =  { version = "0.7.0-rc.0", features = [] }
+dioxus-logger = "0.6.2"
+lazy_static = "1.5.0"
+midi-control = { version = "0.2.3", default-features = false }
+oboe = { version = "0.6.1", features = ["fetch-prebuilt"] }
+stepper-synth = { git = "https://github.com/calacuda/stepper-synth", branch = "feature", version = "0.1.0", default-features = false }
+tracing = "0.1.41"
+tinyaudio = "1.1.0"
+strum = { version = "0.27.2", features = ["derive"] }
+strum_macros = "0.27.2"
+
+[features]
+default = ["mobile"]
+web = ["dioxus/web"]
+desktop = ["dioxus/desktop"]
+mobile = ["dioxus/mobile"]
+
+[profile]
+
+[profile.dev.package."stepper-synth"]
+opt-level = 3
+
+[profile.wasm-dev]
+inherits = "dev"
+opt-level = 1
+
+[profile.server-dev]
+inherits = "dev"
+
+[profile.android-dev]
+inherits = "dev"
+
+[profile.android-dev.package."stepper-synth"]
+opt-level = 3

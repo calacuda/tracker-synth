@@ -1,0 +1,308 @@
+@font-face {
+    font-family: 'Anonymous Pro', monospace;
+    src: url("/assets/fonts/AnonymousPro-Regular.ttf") format("truetype");
+    font-weight: normal;
+    font-style: normal;
+}
+
+/* App-wide styling */
+body {
+    background-color: #1e1e2e;
+    color: #cdd6f4;
+    /* font-family: 'Segoe UI Mono', Tahoma, Geneva, Verdana, sans-serif; */
+    font-family: 'Anonymous Pro', monospace;
+    margin: 0;
+    border-color: #585b70;
+    border-top-color: #585b70;
+    border-bottom-color: #585b70;
+    border-left-color: #585b70;
+    border-right-color: #585b70;
+    width: 100%;
+    max-height: 100svh;
+    height: calc(100svh - 40px);
+    box-sizing: border-box;
+    padding: 20px;
+}
+
+main {
+    margin: 0;
+    width: 100%;
+    height: fit-content;
+    display: flex;
+    flex-direction: row;
+}
+
+div {
+    border-color: #585b70;
+    border-width: 3px;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.col {
+    width: 100%;
+    height: 100%;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.row {
+    width: 100%;
+    text-align: center;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+}
+
+.button {
+    height: 100%;
+    text-align: center;
+    justify-content: center;
+    align-items: center;
+    font-size: x-large;
+    color: #cdd6f4;
+    cursor: pointer;
+    /* Optional: Add a smooth transition for the color change */
+    transition: background-color 0.3s ease, color 0.3s ease;
+    border-radius: 0.5em;
+}
+
+.button:hover {
+    /* background-color: #313244; */
+    background-color: #89b4fa;
+}
+
+.led-select {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.led {
+    width: 1em;
+    height: 1em;
+    border-radius: 0.5em;
+    background-color: #45475a;
+    /* Optional: Add a smooth transition for the color change */
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.led.led-on {
+    background-color: #a6e3a1;
+}
+
+.half-w {
+    width: 50%;
+}
+
+.displaying-sp {
+    background-color: #585b70;
+}
+
+#section-pattern-select {
+    margin: 0;
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    padding-bottom: 1em;
+    margin-bottom: 0.75em;
+    border-bottom-style: solid;
+}
+
+#left-col {
+    margin: 0;
+    width: 20%;
+    height: calc(100svh - 40px);
+    display: flex;
+    flex-direction: column;
+    padding-right: 1em;
+    border-right-style: solid;
+}
+
+#middle-col {
+    margin: 0;
+    width: 65%;
+    height: calc(100svh - 40px);
+    align-items: center;
+    padding-left: 1em;
+    padding-right: 1em;
+    position: relative;
+}
+
+#middle-col #middle-main {
+    margin: 0;
+    height: calc(100svh - 40px);
+    align-items: center;
+    padding-left: 1em;
+    padding-right: 1em;
+    top: 0;
+    left: 0;
+    z-index: 1; 
+}
+
+#middle-col #edit-menu {
+    position: absolute;
+    width: 75%;
+    height: 50%;
+    top: 25%; /* Adjust positioning as needed */
+    left: 12.5%;
+    z-index: 2;
+    background-color: #45475a;
+    border-radius: 1em;
+    justify-content: space-between;
+}
+
+
+#right-col {
+    margin: 0;
+    width: 15%;
+    height: calc(100svh - 40px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-left: 1em;
+    border-left-style: solid;
+}
+
+#displaying-sp {
+    background-color: #585b70;
+}
+
+#nav-list {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    text-align: center;
+    text-justify: center;
+    justify-content: center;
+    align-content: center;
+    align-items: center;
+    justify-items: center;
+    overflow: hidden;
+    overflow-y: scroll;
+}
+
+.nav-item {
+    height: 1.5em;
+    width: 100%;
+    text-align: center;
+    text-justify: center;
+    justify-content: center;
+    align-content: center;
+    align-items: center;
+    justify-items: center;
+    overflow: hidden;
+    overflow-y: scroll;
+    font-size: medium;
+}
+
+#section-display-header {
+    width: 100%;
+    display: flex;
+    flex-direction: Row;
+    text-align: center;
+    text-justify: center;
+    justify-content: space-around;
+    align-items: center;
+    overflow-y: scroll;
+    font-size: medium;
+    padding-bottom: 1em;
+}
+
+#section-display-header div {
+    font-size: xx-large;
+    width: calc(100% / 5)
+}
+
+#section-scroll-list {
+    height: calc(100svh - 40px - 2.25em);
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    overflow: scroll;
+    font-size: x-large;
+}
+
+#section-scroll-div{
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    overflow-y: auto;
+    min-height: 0;
+}
+
+.section-scroll-item {
+    height: 1.75em;
+    width: 100%;
+}
+
+.section-row {
+    height: 1.5em;
+    display: flex;
+    flex-direction: Row;
+    text-align: center;
+    text-justify: center;
+    justify-content: space-around;
+    align-items: center;
+}
+
+.section-row div {
+    width: calc(100% / 7)
+}
+
+.super-center {
+    text-align: center;
+    text-justify: center;
+    justify-content: center;
+    align-content: center;
+    align-items: center;
+    justify-items: center;
+}
+
+#row-light {
+    background-color: #585b70;
+}
+
+#row-dark {
+    background-color: #45475a;
+}
+
+.normal-text {
+    font-size: normal;
+}
+
+.large {
+    font-size: large;
+}
+
+.x-large {
+    font-size: x-large;
+}
+
+.xx-large {
+    font-size: xx-large;
+}
+
+.set-menu {
+    align-items: space-between;
+    align-content: space-between;
+    text-align: space-between;
+    justify-content: space-between;
+    text-justify: space-between;
+    justify-items: space-between;
+}
+
+.space-around {
+    align-items: space-evenly;
+    align-content: space-evenly;
+    text-align: space-evenly;
+    justify-content: space-evenly;
+    text-justify: space-evenly;
+    justify-items: space-evenly;
+}
