@@ -1,31 +1,30 @@
 use core::panic;
-use std::sync::{Arc, Mutex, RwLock};
+use std::{ops::DerefMut, sync::{Arc, Mutex, RwLock}};
 use stepper_synth_backend::{
-    pygame_coms::SynthEngineType,
-    synth_engines::{
+    pygame_coms::SynthEngineType, synth_engines::{
         wave_table::WaveTableEngine,
         Synth,
         SynthChannel,
         SynthEngine,
-    },
-    SampleGen,
-    CHANNEL_SIZE,
-    SAMPLE_RATE,
+    }, HashMap, SampleGen, CHANNEL_SIZE, SAMPLE_RATE
 };
 use tinyaudio::{run_output_device, OutputDevice, OutputDeviceParameters};
 use crate::SynthId;
 
 #[derive(Debug)]
 pub struct TabSynth {
-    pub synth: Arc<RwLock<Vec<(RwLock<SynthId>, RwLock<SynthChannel>)>>>,
+    synths: Arc<RwLock<Vec<(SynthId, SynthChannel)>>>,
+    /// maps synth friendly names to index values in self.synths.
+    /// I'd store the SynthChannel directly but that crashes the app.
+    db: Arc<RwLock<HashMap<SynthId, usize>>>,
 }
 
 impl TabSynth {
     pub fn new() -> (Self, OutputDevice) {
-        let synth = Arc::new(RwLock::new(vec![(RwLock::new("Default".to_string()), RwLock::new(SynthChannel::from(SynthEngineType::WaveTable)))]));
+        let synths = Arc::new(RwLock::new(vec![("Default".to_string(), SynthChannel::from(SynthEngineType::WaveTable))]));
 
         let device = {
-            let synth = synth.clone();
+            let synths = synths.clone();
 
             // move || {
             let params = OutputDeviceParameters {
@@ -39,9 +38,7 @@ impl TabSynth {
 
                 move |data| {
                     for samples in data.chunks_mut(params.channels_count) {
-                        let value = synth.write().map(|synth| synth.iter().map(|(_name, instrument)| instrument.write()
-                            .map(|mut synth| synth.get_sample())
-                            .unwrap_or(0.0)).sum()).unwrap_or(0.0);
+                        let value = synths.write().map(|synth| synth.iter().map(|(_name, instrument)| instrument.get_sample()).sum()).unwrap_or(0.0);
 
                         for sample in samples {
                             *sample = value;
@@ -51,13 +48,43 @@ impl TabSynth {
             })
         };
 
+        let mut db = HashMap::default();
+        db.insert("Default".to_string(), 0);
+        let db = Arc::new(RwLock::new(db));
+
         match device {
-            Ok(device) => (Self { synth }, device),
+            Ok(device) => (Self { synths, db }, device),
             Err(e) => {
                 println!("starting audio playback caused error: {e}");
                 panic!("{e}");
             }
         }
+    }
+
+    // fn do_rename(&self, from: impl ToString, to: impl ToString) -> Result<(), String> {
+    //     let from = from.to_string();
+    //     let to = to.to_string();
+
+    //     let synth_id = {
+    //         let Some(i) = self.synths.read().iter().position(|(id, _synth)| { from == id.read().to_owned() }) else {
+    //             return Err(format!("no synth by the name: \"{from}\", found in database"));
+    //         };
+
+
+    //     };
+
+    //     Ok(())
+    // }
+
+    pub fn rename(&self, from: impl ToString, to: impl ToString) {
+        let from = from.to_string();
+        let to = to.to_string();
+
+        self.synths.read().iter_mut().for_each(|(id, _synth)| { if id.to_owned() == from {
+            *id = from; 
+        }});
+
+
     }
 
     // #[unsafe(no_mangle)]
