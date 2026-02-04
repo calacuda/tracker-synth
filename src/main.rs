@@ -1,28 +1,30 @@
-use dioxus::prelude::*;
+use crate::tracks::{Track, TrackerCmd};
 use android_usbser::usb;
-use crossbeam::channel::{unbounded, Receiver, Sender};
+use crossbeam::channel::{Receiver, Sender, unbounded};
+use dioxus::prelude::*;
 use lazy_static::lazy_static;
-use tracing::*;
-use midi_control::{MidiMessage, KeyEvent, ControlEvent};
+use midi_control::{ControlEvent, KeyEvent, MidiMessage};
 use std::{
-    io::{self, BufRead, BufReader, Write, Read},
+    io::{self, BufRead, BufReader, Read, Write},
     str::FromStr,
     sync::Mutex,
+    sync::{
+        Arc, RwLock,
+        atomic::{AtomicBool, AtomicU32, Ordering},
+    },
+    thread::{JoinHandle, spawn},
     time::{Duration, SystemTime},
-    thread::{spawn, JoinHandle},
-    sync::{atomic::{AtomicBool, AtomicU32, Ordering}, Arc, RwLock},
 };
-use synth::{make_synth, TabSynth};
 use stepper_synth_backend::{
-    MidiControlled, KnobCtrl,
+    CHANNEL_SIZE, KnobCtrl, MidiControlled, SAMPLE_RATE, SampleGen,
     synth_engines::{Synth, SynthEngine, SynthModule},
-    SampleGen, CHANNEL_SIZE, SAMPLE_RATE,
 };
-use crate::tracks::{Track, TrackerCmd};
+use synth::{TabSynth, make_synth};
+use tracing::*;
 
+pub mod less_then;
 pub mod synth;
 pub mod tracks;
-pub mod less_then;
 
 pub type SynthId = String;
 // pub type InstrumentId = String;
@@ -123,7 +125,12 @@ fn main() {
 #[component]
 fn App() -> Element {
     let middle_view = use_signal(|| MiddleColView::Section);
-    let sections = use_signal(|| vec![Track::default(), Track::new(Some("Another-Section".into()), 1, "Default".into())]);
+    let sections = use_signal(|| {
+        vec![
+            Track::default(),
+            Track::new(Some("Another-Section".into()), 1, "Default".into()),
+        ]
+    });
     let displaying_uuid = use_signal(|| 0usize);
     // used to give context to the edit note/velcity/cmd-1/cmd-2
     let edit_cell = use_signal(|| None);
@@ -132,7 +139,7 @@ fn App() -> Element {
         document::Link { rel: "icon", href: FAVICON }
         document::Link { rel: "stylesheet", href: MAIN_CSS }
 
-        main { 
+        main {
             div {
                 id: "left-col",
                 LeftCol { middle_view, sections, displaying: displaying_uuid, edit_cell }
@@ -140,7 +147,7 @@ fn App() -> Element {
             div {
                 id: "middle-col",
                 MiddleCol { middle_view, sections, displaying: displaying_uuid, edit_cell }
-                
+
                 if edit_cell.read().is_some() && middle_view() == MiddleColView::Section {
                     EditSectionMenu { sections, displaying: displaying_uuid, edit_cell }
                 }
@@ -154,13 +161,20 @@ fn App() -> Element {
 }
 
 #[component]
-fn EditSectionMenu(sections: Signal<Vec<Track>>, displaying: Signal<usize>, edit_cell: Signal<Option<(usize, Colums)>>) -> Element {
-    let note = use_signal(|| if let Some((row, cell)) = edit_cell() {
-        sections.read()[displaying()].steps[row].note.unwrap_or(12u8)
-        } else  {
+fn EditSectionMenu(
+    sections: Signal<Vec<Track>>,
+    displaying: Signal<usize>,
+    edit_cell: Signal<Option<(usize, Colums)>>,
+) -> Element {
+    let note = use_signal(|| {
+        if let Some((row, cell)) = edit_cell() {
+            sections.read()[displaying()].steps[row]
+                .note
+                .unwrap_or(12u8)
+        } else {
             0u8
         }
-    );
+    });
     let velocity = use_signal(|| 85u8);
     let cmd = use_signal(|| TrackerCmd::None);
 
@@ -171,7 +185,7 @@ fn EditSectionMenu(sections: Signal<Vec<Track>>, displaying: Signal<usize>, edit
 
             div {
                 id: "set-menu",
-                class: "row set-menu",    
+                class: "row set-menu",
 
                 div {
                     class: "button",
@@ -217,7 +231,7 @@ fn EditSectionMenu(sections: Signal<Vec<Track>>, displaying: Signal<usize>, edit
 
                 div {
                     class: "button",
-                    
+
                     onclick: move |_| {
                         if let Some((row, cell)) = edit_cell() {
                             info!("{row} => {cell:?}");
@@ -256,7 +270,7 @@ fn EditSectionMenu(sections: Signal<Vec<Track>>, displaying: Signal<usize>, edit
                 }
             }
 
-            
+
             if let Some((row, cell)) = edit_cell() {
                 match cell {
                     Colums::Note => rsx! { EditNote { note } },
@@ -316,7 +330,7 @@ fn EditNote(note: Signal<u8>) -> Element {
             }
             div {
                 class: "row space-around",
-        
+
                 for (i, display_name) in note_names.iter().enumerate() {
                     div {
                         class: "button large",
@@ -325,12 +339,12 @@ fn EditNote(note: Signal<u8>) -> Element {
                             note.set((name() + octave() * 12) as u8);
                         },
                         "{display_name}"
-                    }           
+                    }
                 }
             }
             div {
                 class: "row space-around",
-                
+
                 div {
                     class: "xx-large",
                     "{display_midi_note(note())}"
@@ -341,7 +355,12 @@ fn EditNote(note: Signal<u8>) -> Element {
 }
 
 #[component]
-fn MiddleCol(middle_view: Signal<MiddleColView>, sections: Signal<Vec<Track>>, displaying: Signal<usize>, edit_cell: Signal<Option<(usize, Colums)>>) -> Element {
+fn MiddleCol(
+    middle_view: Signal<MiddleColView>,
+    sections: Signal<Vec<Track>>,
+    displaying: Signal<usize>,
+    edit_cell: Signal<Option<(usize, Colums)>>,
+) -> Element {
     rsx! {
         div {
             id: "middle-main",
@@ -353,7 +372,12 @@ fn MiddleCol(middle_view: Signal<MiddleColView>, sections: Signal<Vec<Track>>, d
 }
 
 #[component]
-fn SectionDisplay(middle_view: Signal<MiddleColView>, sections: Signal<Vec<Track>>, displaying: Signal<usize>, edit_cell: Signal<Option<(usize, Colums)>>) -> Element {
+fn SectionDisplay(
+    middle_view: Signal<MiddleColView>,
+    sections: Signal<Vec<Track>>,
+    displaying: Signal<usize>,
+    edit_cell: Signal<Option<(usize, Colums)>>,
+) -> Element {
     rsx! {
         div {
             id: "section-display-header",
@@ -399,7 +423,7 @@ fn SectionDisplay(middle_view: Signal<MiddleColView>, sections: Signal<Vec<Track
                                     }
                                 },
                                 class: "button super-center",
-                                
+
                                 "{step.note.map(display_midi_note).unwrap_or(\"---\".into())}"
                             }
                             // Velocity
@@ -452,9 +476,14 @@ fn SectionDisplay(middle_view: Signal<MiddleColView>, sections: Signal<Vec<Track
 }
 
 #[component]
-fn LeftCol(middle_view: Signal<MiddleColView>, sections: Signal<Vec<Track>>, displaying: Signal<usize>, edit_cell: Signal<Option<(usize, Colums)>>) -> Element {
+fn LeftCol(
+    middle_view: Signal<MiddleColView>,
+    sections: Signal<Vec<Track>>,
+    displaying: Signal<usize>,
+    edit_cell: Signal<Option<(usize, Colums)>>,
+) -> Element {
     let mut listing = use_signal(|| MiddleColView::Section);
-    let view_sections = || { listing() == MiddleColView::Section };
+    let view_sections = || listing() == MiddleColView::Section;
 
     rsx! {
         div {
@@ -469,7 +498,7 @@ fn LeftCol(middle_view: Signal<MiddleColView>, sections: Signal<Vec<Track>>, dis
                     class: {
                         let mut classes = vec!["led"];
                         if view_sections() { classes.push("led-on") }
-                        classes.join(" ") 
+                        classes.join(" ")
                     },
                 }
             }
@@ -481,10 +510,10 @@ fn LeftCol(middle_view: Signal<MiddleColView>, sections: Signal<Vec<Track>>, dis
                 div {
                     class: {
                         let mut classes = vec!["led"];
-                        
+
                         if !view_sections() { classes.push("led-on") }
 
-                        classes.join(" ") 
+                        classes.join(" ")
                     },
                 }
             }
@@ -502,7 +531,7 @@ fn LeftCol(middle_view: Signal<MiddleColView>, sections: Signal<Vec<Track>>, dis
                 }
             } {
                 // TODO: add edit-name button here
-                div { 
+                div {
                     id: {
                         if (listing() == middle_view()) && (uuid == displaying()) {
                             "displaying-sp".to_string()
@@ -536,7 +565,6 @@ pub fn display_midi_note(midi_note: u8) -> String {
     format!("{note_name}{octave:X}")
 }
 
-
 #[component]
 fn PlayTone() -> Element {
     let mut playing = false;
@@ -568,3 +596,4 @@ mod test {
         assert_eq!(display_midi_note(60), "C-4");
     }
 }
+
